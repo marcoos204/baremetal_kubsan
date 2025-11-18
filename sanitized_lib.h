@@ -20,4 +20,16 @@ void test_globals_overflow(void);
 void test_memset_overflow(void);
 void test_memcpy_overflow(void);
 
+//ubsan
+
+static void test_ubsan_add_overflow(void);
+static void test_ubsan_sub_overflow(void);
+static void test_ubsan_mul_overflow(void);
+static void test_ubsan_negate_overflow(void);
+static void test_ubsan_truncate_signed(void);
+static void test_ubsan_shift_out_of_bounds(void);
+static void test_ubsan_out_of_bounds(void);
+static void test_ubsan_load_invalid_value(void);
+static void test_ubsan_misaligned_access(void);
+
 #endif  // __SANITIZED_LIB_H__

@@ -17,15 +17,16 @@
 #include "printf.h"
 #include "rt_utils.h"
 #include "sanitized_lib.h"
+#include "ubsan.h"
 
 int main(void) {
-  printf("Starting bare-metal KASan test driver.\n");
+  printf("Starting bare-metal UBSan test driver.\n");
 
   // Needed to invoke KASan globals instrumentation.
   call_global_ctors();
 
   initialize_heap();
-
+/*
   initialize_kasan();
 
   test_heap_overflow();
@@ -33,6 +34,17 @@ int main(void) {
   test_globals_overflow();
   test_memset_overflow();
   test_memcpy_overflow();
+*/
+
+  test_ubsan_add_overflow();
+	test_ubsan_sub_overflow();
+	test_ubsan_mul_overflow();
+	test_ubsan_negate_overflow();
+	test_ubsan_truncate_signed();
+	test_ubsan_shift_out_of_bounds();
+	test_ubsan_out_of_bounds();
+	test_ubsan_load_invalid_value();
+	test_ubsan_misaligned_access();
 
   printf("Press ctrl + a then x to exit.\n");
 
