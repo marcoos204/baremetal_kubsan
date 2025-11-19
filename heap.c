@@ -11,8 +11,9 @@
  * GNU General Public License for more details.
  */
 
-#include "common.h"
-#include "kasan.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 // These symbols are defined in the linker script.
 extern char __heap_start;
@@ -38,6 +39,6 @@ void *allocate_chunk(unsigned long size) {
 
 void free_chunk(void *ptr) { (void)ptr; }
 
-void *malloc(unsigned long size) { return kasan_malloc_hook(size); }
+//void *malloc(unsigned long size) { return kasan_malloc_hook(size); }
 
-void free(void *ptr) { return kasan_free_hook(ptr); }
+//void free(void *ptr) { return kasan_free_hook(ptr); }

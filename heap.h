@@ -19,7 +19,7 @@ void initialize_heap(void);
 void *allocate_chunk(unsigned long size);
 void free_chunk(void *ptr);
 
-void *malloc(unsigned long size);
-void free(void *ptr);
+//void *malloc(unsigned long size);
+//void free(void *ptr);
 
 #endif  // __KASAN_HEAP_H__

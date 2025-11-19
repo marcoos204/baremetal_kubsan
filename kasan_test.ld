@@ -61,9 +61,10 @@ SECTIONS
 
   . = . + 0x1000;
   __stack_top = .;
-
-  . = KASAN_SHADOW_MEMORY_START;
-  __kasan_shadow_memory_start = .;
-  . = . + KASAN_SHADOW_MEMORY_SIZE;
-  __kasan_shadow_memory_end = .;
+/*
+ * . = KASAN_SHADOW_MEMORY_START;
+ * __kasan_shadow_memory_start = .;
+ * . = . + KASAN_SHADOW_MEMORY_SIZE;
+ * __kasan_shadow_memory_end = .;
+ */
 }

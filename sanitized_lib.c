@@ -11,10 +11,28 @@
  * GNU General Public License for more details.
  */
 
-#include "common.h"
+//#include "common.h"
 #include "heap.h"
 #include "printf.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include "ubsan.h"
+#ifndef INT_MIN
+#define INT_MIN          (-__INT_MAX__ - 1)
+#endif
+#ifndef INT_MAX
+#define INT_MAX          __INT_MAX__
+#endif
 
+#ifndef LONG_MIN
+#define LONG_MIN         (-__LONG_MAX__ - 1)
+#endif
+#ifndef LONG_MAX
+#define LONG_MAX         __LONG_MAX__
+#endif
+
+/*
 void test_heap_overflow(void) {
   int oob_index = 18;
   int size = 17;
@@ -67,6 +85,7 @@ void test_memcpy_overflow(void) {
   memcpy(buffer, global_char_buffer, oob_size);
 }
 
+
 /*====================================================================
                   UBSAN TESTCASES                                     */
 
@@ -88,6 +107,7 @@ static void test_ubsan_add_overflow(void)
 
 	//UBSAN_TEST(CONFIG_UBSAN_INTEGER_WRAP);
 	val += 2;
+  printf("%d", val);
 }
 
 static void test_ubsan_sub_overflow(void)
@@ -100,6 +120,8 @@ static void test_ubsan_sub_overflow(void)
 
 	//UBSAN_TEST(CONFIG_UBSAN_INTEGER_WRAP);
 	val -= val2;
+  printf("%d", val);
+
 }
 
 static void test_ubsan_mul_overflow(void)
@@ -165,6 +187,7 @@ static void test_ubsan_shift_out_of_bounds(void)
 	val2 <<= wrap;
 }
 
+
 static void test_ubsan_out_of_bounds(void)
 {
 	int i = 4, j = 4, k = -1;
@@ -223,6 +246,7 @@ static void test_ubsan_load_invalid_value(void)
 	eval2 = eval;
 }
 
+/*
 static void test_ubsan_misaligned_access(void)
 {
 	volatile char arr[5] __aligned(4) = {1, 2, 3, 4, 5};
@@ -235,6 +259,7 @@ static void test_ubsan_misaligned_access(void)
 	ptr = (int *)(arr + 1);
 	*ptr = val;
 }
+*/
 
 /*
 

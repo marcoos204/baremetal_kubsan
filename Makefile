@@ -25,9 +25,9 @@ CFLAGS := $(CFLAGS_ARCH)
 CFLAGS += -ffreestanding
 
 CFLAGS += -DTARGET_ARCH_$(ARCH)
-CFLAGS += -DKASAN_SHADOW_MAPPING_OFFSET=$(KASAN_SHADOW_MAPPING_OFFSET)
-CFLAGS += -DKASAN_SHADOW_MEMORY_START=$(KASAN_SHADOW_MEMORY_START)
-CFLAGS += -DKASAN_SHADOW_MEMORY_SIZE=$(KASAN_SHADOW_MEMORY_SIZE)
+#CFLAGS += -DKASAN_SHADOW_MAPPING_OFFSET=$(KASAN_SHADOW_MAPPING_OFFSET)
+#CFLAGS += -DKASAN_SHADOW_MEMORY_START=$(KASAN_SHADOW_MEMORY_START)
+#CFLAGS += -DKASAN_SHADOW_MEMORY_SIZE=$(KASAN_SHADOW_MEMORY_SIZE)
 CFLAGS += -DTARGET_DRAM_START=$(TARGET_DRAM_START)
 CFLAGS += -DTARGET_DRAM_END=$(TARGET_DRAM_END)
 
@@ -35,28 +35,30 @@ CFLAGS += -DPRINTF_DISABLE_SUPPORT_FLOAT
 CFLAGS += -DPRINTF_DISABLE_SUPPORT_EXPONENTIAL
 CFLAGS += -DPRINTF_DISABLE_SUPPORT_PTRDIFF_T
 CFLAGS += -DPRINTF_DISABLE_SUPPORT_LONG_LONG
-
+CFLAGS += -g
 CFLAGS += -Wno-incompatible-library-redeclaration
 
 CFLAGS += -Ithird_party/printf -I./
 
 LDFLAGS := -nostdlib
 
+
 # KASan-specific compiler options
-KASAN_SANITIZE_STACK := 1
-KASAN_SANITIZE_GLOBALS := 1
+#KASAN_SANITIZE_STACK := 1
+#KASAN_SANITIZE_GLOBALS := 1
 
-KASAN_CC_FLAGS := -fsanitize=kernel-address
-KASAN_CC_FLAGS += -fno-builtin
-KASAN_CC_FLAGS += -mllvm -asan-mapping-offset=$(KASAN_SHADOW_MAPPING_OFFSET)
+KASAN_CC_FLAGS := -fsanitize=undefined
+KASAN_CC_FLAGS += -fno-sanitize=pointer-overflow
+#KASAN_CC_FLAGS += -fno-builtin
+#KASAN_CC_FLAGS += -mllvm -asan-mapping-offset=$(KASAN_SHADOW_MAPPING_OFFSET)
 KASAN_CC_FLAGS += -mllvm -asan-instrumentation-with-call-threshold=0
-KASAN_CC_FLAGS += -mllvm -asan-stack=$(KASAN_SANITIZE_STACK)
-KASAN_CC_FLAGS += -mllvm -asan-globals=$(KASAN_SANITIZE_GLOBALS)
-KASAN_CC_FLAGS += -DKASAN_ENABLED
+#KASAN_CC_FLAGS += -mllvm -asan-stack=$(KASAN_SANITIZE_STACK)
+#KASAN_CC_FLAGS += -mllvm -asan-globals=$(KASAN_SANITIZE_GLOBALS)
+#KASAN_CC_FLAGS += -DKASAN_ENABLED
 
-SRCS := kasan.c \
+SRCS := kubsan.c \
         heap.c \
-        kasan_test.c \
+        kubsan_test.c \
         sanitized_lib.c \
         rt_utils.c \
         start_$(ARCH).S \
@@ -70,6 +72,7 @@ LD_SCRIPT_GEN := kasan_test.lds
 
 # Use KASAN_CC_FLAGS for the code we would like to cover with KASan
 sanitized_lib.o: CFLAGS := $(CFLAGS) $(KASAN_CC_FLAGS)
+kubsan_test.o: CFLAGS := $(CFLAGS) $(KASAN_CC_FLAGS)
 
 # This workaround is not needed if you build the project with the LLVM
 # toolchain of version 18 and higher (i.e. which includes
@@ -85,14 +88,14 @@ sanitized_lib.o: CFLAGS := $(subst $(ARCH_TARGET),$(KASAN_TARGET),$(CFLAGS))
 $(LD_SCRIPT_GEN): $(LD_SCRIPT)
 	$(CC) -E -P -x c $(CFLAGS) $< >> $@
 
-kasan_test: $(LD_SCRIPT_GEN) $(OBJS)
+kubsan_test: $(LD_SCRIPT_GEN) $(OBJS)
 	$(LD) -T $(LD_SCRIPT_GEN) $(LDFLAGS) $(OBJS) -o $@
 
 .PHONY: run
-run: kasan_test
+run: kubsan_test
 	$(QEMU) $<
 
 .PHONY: clean
 clean:
-	rm -rf kasan_test $(OBJS) $(LD_SCRIPT_GEN)
+	rm -rf kubsan_test $(OBJS) $(LD_SCRIPT_GEN)
 	rm -rf $(foreach arch,$(SUPPORTED_ARCH),start_$(arch).o)

@@ -11,7 +11,12 @@
  * GNU General Public License for more details.
  */
 
-#include "common.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdarg.h>
+
+typedef long ssize_t;
 
 void my_memset(void *dest, int c, unsigned long n) {
   unsigned char *ptr = (unsigned char *)dest;
@@ -69,6 +74,20 @@ void _putchar(char c) {
   uint16_t com1_port = 0x3f8;
   asm("outb %0, %1" : : "a"(c), "Nd"(com1_port));
 }
+
+int scnprintf(char * buf, size_t size, const char * fmt, ...) //check varidic arguments!
+{
+       ssize_t ssize = size;
+       va_list args;
+       int i;
+
+       va_start(args, fmt);
+       i = vsnprintf(buf, size, fmt, args);
+       va_end(args);
+
+       return (i >= ssize) ? (ssize - 1) : i;
+}
+
 
 #else  // TARGET_ARCH_x86
 

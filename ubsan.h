@@ -2,6 +2,19 @@
 #ifndef _LIB_UBSAN_H
 #define _LIB_UBSAN_H
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+typedef signed char           s8;
+typedef char                  u8;
+typedef short                s16;
+typedef unsigned short       u16;
+typedef int                  s32;
+typedef unsigned int         u32;
+typedef long long            s64;
+typedef unsigned long long   u64;
+
 /*
  * ABI defined by Clang's UBSAN enum SanitizerHandler:
  * https://github.com/llvm/llvm-project/blob/release/16.x/clang/lib/CodeGen/CodeGenFunction.h#L113
@@ -122,6 +135,19 @@ struct alignment_assumption_data {
 	struct source_location assumption_location;
 	struct type_descriptor *type;
 };
+
+//added
+
+typedef signed char           s8;
+typedef char                  u8;
+typedef short                s16;
+typedef unsigned short       u16;
+typedef int                  s32;
+typedef unsigned int         u32;
+typedef long long            s64;
+typedef unsigned long long   u64;
+
+//S
 
 #if defined(CONFIG_ARCH_SUPPORTS_INT128)
 typedef __int128 s_max;
