@@ -104,10 +104,11 @@ static void test_ubsan_add_overflow(void)
 	volatile int val = INT_MAX;
   printf("\nKUBSan test: integer overflow in add operation\n");
   printf("Overflowing integer variable with INT_MAX value\n");
+  
 
 	//UBSAN_TEST(CONFIG_UBSAN_INTEGER_WRAP);
 	val += 2;
-  printf("%d", val);
+  //printf("%d", val);
 }
 
 static void test_ubsan_sub_overflow(void)
@@ -120,7 +121,6 @@ static void test_ubsan_sub_overflow(void)
 
 	//UBSAN_TEST(CONFIG_UBSAN_INTEGER_WRAP);
 	val -= val2;
-  printf("%d", val);
 
 }
 
@@ -169,6 +169,8 @@ static void test_ubsan_truncate_signed(void)
 
 	//UBSAN_TEST(CONFIG_UBSAN_INTEGER_WRAP);
 	val2 = val;
+
+  
 }
 
 static void test_ubsan_shift_out_of_bounds(void)

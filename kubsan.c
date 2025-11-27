@@ -22,6 +22,8 @@
 
 typedef long ssize_t;
 
+/*
+
 int scnprintf(char * buf, size_t size, const char * fmt, ...) //check varidic arguments!
 {
        ssize_t ssize = size;
@@ -34,6 +36,7 @@ int scnprintf(char * buf, size_t size, const char * fmt, ...) //check varidic ar
 
        return (i >= ssize) ? (ssize - 1) : i;
 }
+       */
 
 static const char * const type_check_kinds[] = {
 	"load of",
@@ -131,7 +134,7 @@ static void val_to_string(char *str, size_t size, struct type_descriptor *type,
 #if defined(CONFIG_ARCH_SUPPORTS_INT128)
 			u_max val = get_unsigned_val(type, value);
 
-			scnprintf(str, size, "0x%08x%08x%08x%08x",
+			snprintf(str, size, "0x%08x%08x%08x%08x",
 				(u32)(val >> 96),
 				(u32)(val >> 64),
 				(u32)(val >> 32),
@@ -140,10 +143,10 @@ static void val_to_string(char *str, size_t size, struct type_descriptor *type,
 			//WARN_ON(1);
 #endif
 		} else if (type_is_signed(type)) {
-			scnprintf(str, size, "%lld",
+			snprintf(str, size, "%lld",
 				(s64)get_signed_val(type, value));
 		} else {
-			scnprintf(str, size, "%llu",
+			snprintf(str, size, "%llu",
 				(u64)get_unsigned_val(type, value));
 		}
 	}
@@ -155,7 +158,7 @@ static void ubsan_prologue(struct source_location *loc, const char *reason)
 {
 	//current->in_ubsan++;
 
-	printf("================================================================================");//pr_warn(CUT_HERE);
+	printf("================================================================================\n");//pr_warn(CUT_HERE);
 
 	printf("UBSAN: %s in %s:%d:%d\n", reason, loc->file_name,
 		loc->line & LINE_MASK, loc->column & COLUMN_MASK); //pr_err(...)
@@ -165,8 +168,8 @@ static void ubsan_prologue(struct source_location *loc, const char *reason)
 
 static void ubsan_epilogue(void)
 {
-	//dump_stack();
-	printf("---[ end trace ]---\n");
+	//dump_stackf();
+	printf("----------------------\n");
 
 	//current->in_ubsan--;
 
@@ -192,16 +195,17 @@ static void handle_overflow(struct overflow_data *data, void *lhs,
 			"signed-integer-overflow" :
 			"unsigned-integer-overflow");
 
-	val_to_string(lhs_val_str, sizeof(lhs_val_str), type, lhs);
-	val_to_string(rhs_val_str, sizeof(rhs_val_str), type, rhs);
-	printf("%s %c %s cannot be represented in type %s\n",
-		lhs_val_str,
+	//val_to_string(lhs_val_str, sizeof(lhs_val_str), type, lhs);
+	//val_to_string(rhs_val_str, sizeof(rhs_val_str), type, rhs);
+	
+    printf("%c operation cannot be represented in type %s with those operands\n",
 		op,
-		rhs_val_str,
 		type->type_name);
+    
 
 	ubsan_epilogue();
 }
+
 
 void __ubsan_handle_add_overflow(void *data,
 				void *lhs, void *rhs)
@@ -209,6 +213,8 @@ void __ubsan_handle_add_overflow(void *data,
 
 	handle_overflow(data, lhs, rhs, '+');
 }
+
+
 //EXPORT_SYMBOL(__ubsan_handle_add_overflow);
 
 void __ubsan_handle_sub_overflow(void *data,
@@ -237,8 +243,13 @@ void __ubsan_handle_negate_overflow(void *_data, void *old_val)
 
 	val_to_string(old_val_str, sizeof(old_val_str), data->type, old_val);
 
+    /*
 	printf("negation of %s cannot be represented in type %s:\n",
 		old_val_str, data->type->type_name);
+    */
+
+    printf("negation of this value cannot be represented in type %s\n",
+    data->type->type_name);
 
 	ubsan_epilogue();
 }
@@ -258,16 +269,27 @@ void __ubsan_handle_implicit_conversion(void *_data, void *from_val, void *to_va
 
 	ubsan_prologue(&data->location, "implicit-conversion");
 
+    /*
+
 	printf("cannot represent %s value %s during %s %s, truncated to %s\n",
 		data->from_type->type_name,
 		from_val_str,
 		type_check_kinds[data->type_check_kind],
 		data->to_type->type_name,
 		to_val_str);
+    */
+    	
+    printf("cannot represent %s value %s during %s %s: truncated.\n",
+        data->from_type->type_name,
+        from_val_str,
+        type_check_kinds[data->type_check_kind],
+        data->to_type->type_name);
+    
 
 	ubsan_epilogue();
 }
 //EXPORT_SYMBOL(__ubsan_handle_implicit_conversion);
+
 
 void __ubsan_handle_divrem_overflow(void *_data, void *lhs, void *rhs)
 {
@@ -281,11 +303,25 @@ void __ubsan_handle_divrem_overflow(void *_data, void *lhs, void *rhs)
 
 	val_to_string(lhs_val_str, sizeof(lhs_val_str), data->type, lhs);
 
+    /*
+
 	if (type_is_signed(data->type) && get_signed_val(data->type, rhs) == -1)
 		printf("division of %s by -1 cannot be represented in type %s\n",
 			lhs_val_str, data->type->type_name);
 	else
 		printf("division by zero\n");
+
+     */
+
+    
+
+	if (type_is_signed(data->type) && get_signed_val(data->type, rhs) == -1)
+		printf("division of this value by -1 cannot be represented in type %s\n",
+			 data->type->type_name);
+	else
+		printf("division by zero\n");
+
+     
 
 	ubsan_epilogue();
 }
@@ -389,9 +425,18 @@ void __ubsan_handle_out_of_bounds(void *_data, void *index)
 	ubsan_prologue(&data->location, "array-index-out-of-bounds");
 
 	val_to_string(index_str, sizeof(index_str), data->index_type, index);
+    
+    /*
 	printf("index %s is out of range for type %s\n", index_str,
 		data->array_type->type_name);
 	ubsan_epilogue();
+    */
+
+    printf("used index is out of range for type %s\n",
+		data->array_type->type_name);
+	ubsan_epilogue();
+
+
 }
 //EXPORT_SYMBOL(__ubsan_handle_out_of_bounds);
 
@@ -411,7 +456,7 @@ void __ubsan_handle_shift_out_of_bounds(void *_data, void *lhs, void *rhs)
 
 	val_to_string(rhs_str, sizeof(rhs_str), rhs_type, rhs);
 	val_to_string(lhs_str, sizeof(lhs_str), lhs_type, lhs);
-
+    /*
 	if (val_is_negative(rhs_type, rhs))
 		printf("shift exponent %s is negative\n", rhs_str);
 
@@ -429,6 +474,20 @@ void __ubsan_handle_shift_out_of_bounds(void *_data, void *lhs, void *rhs)
 			" represented in type %s\n",
 			lhs_str, rhs_str,
 			lhs_type->type_name);
+    */
+    if (val_is_negative(rhs_type, rhs))
+    printf("shift exponent is negative\n");
+
+	else if (get_unsigned_val(rhs_type, rhs) >=
+		type_bit_width(lhs_type))
+		printf("shift exponent is too large for %u-bit type %s\n",
+			type_bit_width(lhs_type),
+			lhs_type->type_name);
+	else if (val_is_negative(lhs_type, lhs))
+		printf("left shift of negative value\n");
+	else
+		printf("left shift of this value by this places cannot be"
+			" represented in type %s\n", lhs_type->type_name);
 
 	ubsan_epilogue();
 out:
@@ -459,9 +518,11 @@ void __ubsan_handle_load_invalid_value(void *_data, void *val)
 	ubsan_prologue(&data->location, "invalid-load");
 
 	val_to_string(val_str, sizeof(val_str), data->type, val);
-
+    /*
 	printf("load of value %s is not a valid value for type %s\n",
 		val_str, data->type->type_name);
+    */
+   	printf("load of this value is not a valid value for type %s\n", data->type->type_name);
 
 	ubsan_epilogue();
 out:

@@ -49,6 +49,7 @@ LDFLAGS := -nostdlib
 
 KASAN_CC_FLAGS := -fsanitize=undefined
 KASAN_CC_FLAGS += -fno-sanitize=pointer-overflow
+KASAN_CC_FLAGS += -fsanitize=implicit-signed-integer-truncation
 #KASAN_CC_FLAGS += -fno-builtin
 #KASAN_CC_FLAGS += -mllvm -asan-mapping-offset=$(KASAN_SHADOW_MAPPING_OFFSET)
 KASAN_CC_FLAGS += -mllvm -asan-instrumentation-with-call-threshold=0
