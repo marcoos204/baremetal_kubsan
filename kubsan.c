@@ -22,22 +22,6 @@
 
 typedef long ssize_t;
 
-/*
-
-int scnprintf(char * buf, size_t size, const char * fmt, ...) //check varidic arguments!
-{
-       ssize_t ssize = size;
-       va_list args;
-       int i;
-
-       va_start(args, fmt);
-       i = vsnprintf(buf, size, fmt, args);
-       va_end(args);
-
-       return (i >= ssize) ? (ssize - 1) : i;
-}
-       */
-
 static const char * const type_check_kinds[] = {
 	"load of",
 	"store to",
@@ -50,23 +34,6 @@ static const char * const type_check_kinds[] = {
 };
 
 
-
-
-
-// UTILITY FUNCTIONS: USED TO MANAGE THE HANDLER'S DATA (MAY NEED CHANGES)
-
-/*
-static bool was_reported(struct source_location *location)
-{
-	return test_and_set_bit(REPORTED_BIT, &location->reported);
-}
-
-static bool suppress_report(struct source_location *loc)
-{
-	return current->in_ubsan || was_reported(loc);
-}
-*/
-
 static bool type_is_int(struct type_descriptor *type)
 {
 	return type->type_kind == type_kind_int;
@@ -74,7 +41,6 @@ static bool type_is_int(struct type_descriptor *type)
 
 static bool type_is_signed(struct type_descriptor *type)
 {
-	//WARN_ON(!type_is_int(type)); used to log a warning in the kernel log. Since we have no kernel...
 	return  type->type_info & 1;
 }
 
@@ -87,8 +53,6 @@ static bool is_inline_int(struct type_descriptor *type)
 {
 	unsigned inline_bits = sizeof(unsigned long)*8;
 	unsigned bits = type_bit_width(type);
-
-	//WARN_ON(!type_is_int(type));
 
 	return bits <= inline_bits;
 }
@@ -124,62 +88,26 @@ static u_max get_unsigned_val(struct type_descriptor *type, void *val)
 	return *(u_max *)val;
 }
 
-//check val_to_string and use of scnprintf
-
-static void val_to_string(char *str, size_t size, struct type_descriptor *type,
-			void *value)
-{
-	if (type_is_int(type)) {
-		if (type_bit_width(type) == 128) {
-#if defined(CONFIG_ARCH_SUPPORTS_INT128)
-			u_max val = get_unsigned_val(type, value);
-
-			snprintf(str, size, "0x%08x%08x%08x%08x",
-				(u32)(val >> 96),
-				(u32)(val >> 64),
-				(u32)(val >> 32),
-				(u32)(val));
-#else
-			//WARN_ON(1);
-#endif
-		} else if (type_is_signed(type)) {
-			snprintf(str, size, "%lld",
-				(s64)get_signed_val(type, value));
-		} else {
-			snprintf(str, size, "%llu",
-				(u64)get_unsigned_val(type, value));
-		}
-	}
-}
-
-//================================================================================
 
 static void ubsan_prologue(struct source_location *loc, const char *reason)
 {
-	//current->in_ubsan++;
 
-	printf("================================================================================\n");//pr_warn(CUT_HERE);
+	printf("================================================================================\n");
 
 	printf("UBSAN: %s in %s:%d:%d\n", reason, loc->file_name,
-		loc->line & LINE_MASK, loc->column & COLUMN_MASK); //pr_err(...)
+		loc->line & LINE_MASK, loc->column & COLUMN_MASK); 
 
-	//kunit_fail_current_test("%s in %s", reason, loc->file_name);
+	
 }
 
 static void ubsan_epilogue(void)
 {
-	//dump_stackf();
+
 	printf("----------------------\n");
 
-	//current->in_ubsan--;
-
-	//check_panic_on_warn("UBSAN");
 }
 
-/*Functions below will use ubsan_prologue and ubsan_epilogue to create the console output, and get the variables
-passed by the compiler in runtime.*/
 
-//Ubsan handles
 static void handle_overflow(struct overflow_data *data, void *lhs,
 			void *rhs, char op)
 {
@@ -188,15 +116,10 @@ static void handle_overflow(struct overflow_data *data, void *lhs,
 	char lhs_val_str[VALUE_LENGTH];
 	char rhs_val_str[VALUE_LENGTH];
 
-	//if (suppress_report(&data->location))
-	//	return;
 
 	ubsan_prologue(&data->location, type_is_signed(type) ?
 			"signed-integer-overflow" :
 			"unsigned-integer-overflow");
-
-	//val_to_string(lhs_val_str, sizeof(lhs_val_str), type, lhs);
-	//val_to_string(rhs_val_str, sizeof(rhs_val_str), type, rhs);
 	
     printf("%c operation cannot be represented in type %s with those operands\n",
 		op,
@@ -215,45 +138,32 @@ void __ubsan_handle_add_overflow(void *data,
 }
 
 
-//EXPORT_SYMBOL(__ubsan_handle_add_overflow);
 
 void __ubsan_handle_sub_overflow(void *data,
 				void *lhs, void *rhs)
 {
 	handle_overflow(data, lhs, rhs, '-');
 }
-//EXPORT_SYMBOL(__ubsan_handle_sub_overflow);
 
 void __ubsan_handle_mul_overflow(void *data,
 				void *lhs, void *rhs)
 {
 	handle_overflow(data, lhs, rhs, '*');
 }
-//EXPORT_SYMBOL(__ubsan_handle_mul_overflow);
 
 void __ubsan_handle_negate_overflow(void *_data, void *old_val)
 {
 	struct overflow_data *data = _data;
 	char old_val_str[VALUE_LENGTH];
 
-	//if (suppress_report(&data->location))
-	//	 return;
 
 	ubsan_prologue(&data->location, "negation-overflow");
-
-	val_to_string(old_val_str, sizeof(old_val_str), data->type, old_val);
-
-    /*
-	printf("negation of %s cannot be represented in type %s:\n",
-		old_val_str, data->type->type_name);
-    */
 
     printf("negation of this value cannot be represented in type %s\n",
     data->type->type_name);
 
 	ubsan_epilogue();
 }
-//EXPORT_SYMBOL(__ubsan_handle_negate_overflow);
 
 void __ubsan_handle_implicit_conversion(void *_data, void *from_val, void *to_val)
 {
@@ -261,23 +171,8 @@ void __ubsan_handle_implicit_conversion(void *_data, void *from_val, void *to_va
 	char from_val_str[VALUE_LENGTH];
 	char to_val_str[VALUE_LENGTH];
 
-	//if (suppress_report(&data->location))
-	//	return;
-
-	val_to_string(from_val_str, sizeof(from_val_str), data->from_type, from_val);
-	val_to_string(to_val_str, sizeof(to_val_str), data->to_type, to_val);
 
 	ubsan_prologue(&data->location, "implicit-conversion");
-
-    /*
-
-	printf("cannot represent %s value %s during %s %s, truncated to %s\n",
-		data->from_type->type_name,
-		from_val_str,
-		type_check_kinds[data->type_check_kind],
-		data->to_type->type_name,
-		to_val_str);
-    */
     	
     printf("cannot represent %s value %s during %s %s: truncated.\n",
         data->from_type->type_name,
@@ -288,7 +183,6 @@ void __ubsan_handle_implicit_conversion(void *_data, void *from_val, void *to_va
 
 	ubsan_epilogue();
 }
-//EXPORT_SYMBOL(__ubsan_handle_implicit_conversion);
 
 
 void __ubsan_handle_divrem_overflow(void *_data, void *lhs, void *rhs)
@@ -296,24 +190,7 @@ void __ubsan_handle_divrem_overflow(void *_data, void *lhs, void *rhs)
 	struct overflow_data *data = _data;
 	char lhs_val_str[VALUE_LENGTH];
 
-	//if (suppress_report(&data->location))
-	//	return;
-
-	ubsan_prologue(&data->location, "division-overflow");
-
-	val_to_string(lhs_val_str, sizeof(lhs_val_str), data->type, lhs);
-
-    /*
-
-	if (type_is_signed(data->type) && get_signed_val(data->type, rhs) == -1)
-		printf("division of %s by -1 cannot be represented in type %s\n",
-			lhs_val_str, data->type->type_name);
-	else
-		printf("division by zero\n");
-
-     */
-
-    
+	ubsan_prologue(&data->location, "division-overflow");    
 
 	if (type_is_signed(data->type) && get_signed_val(data->type, rhs) == -1)
 		printf("division of this value by -1 cannot be represented in type %s\n",
@@ -325,12 +202,10 @@ void __ubsan_handle_divrem_overflow(void *_data, void *lhs, void *rhs)
 
 	ubsan_epilogue();
 }
-//EXPORT_SYMBOL(__ubsan_handle_divrem_overflow);
 
 static void handle_null_ptr_deref(struct type_mismatch_data_common *data)
 {
-	//if (suppress_report(data->location))
-	//	return;
+
 
 	ubsan_prologue(data->location, "null-ptr-deref");
 
@@ -344,8 +219,6 @@ static void handle_null_ptr_deref(struct type_mismatch_data_common *data)
 static void handle_misaligned_access(struct type_mismatch_data_common *data,
 				unsigned long ptr)
 {
-	//if (suppress_report(data->location))
-	//	return;
 
 	ubsan_prologue(data->location, "misaligned-access");
 
@@ -360,8 +233,6 @@ static void handle_misaligned_access(struct type_mismatch_data_common *data,
 static void handle_object_size_mismatch(struct type_mismatch_data_common *data,
 					unsigned long ptr)
 {
-	//if (suppress_report(data->location))
-	//	return;
 
 	ubsan_prologue(data->location, "object-size-mismatch");
 	printf("%s address %p with insufficient space\n",
@@ -374,7 +245,6 @@ static void handle_object_size_mismatch(struct type_mismatch_data_common *data,
 static void ubsan_type_mismatch_common(struct type_mismatch_data_common *data,
 				unsigned long ptr)
 {
-	//unsigned long flags = user_access_save();
 
 	if (!ptr)
 		handle_null_ptr_deref(data);
@@ -383,7 +253,6 @@ static void ubsan_type_mismatch_common(struct type_mismatch_data_common *data,
 	else
 		handle_object_size_mismatch(data, ptr);
 
-	//user_access_restore(flags);
 }
 
 void __ubsan_handle_type_mismatch(struct type_mismatch_data *data,
@@ -398,7 +267,6 @@ void __ubsan_handle_type_mismatch(struct type_mismatch_data *data,
 
 	ubsan_type_mismatch_common(&common_data, (unsigned long)ptr);
 }
-//EXPORT_SYMBOL(__ubsan_handle_type_mismatch);
 
 void __ubsan_handle_type_mismatch_v1(void *_data, void *ptr)
 {
@@ -412,25 +280,13 @@ void __ubsan_handle_type_mismatch_v1(void *_data, void *ptr)
 
 	ubsan_type_mismatch_common(&common_data, (unsigned long)ptr);
 }
-//EXPORT_SYMBOL(__ubsan_handle_type_mismatch_v1);
 
 void __ubsan_handle_out_of_bounds(void *_data, void *index)
 {
 	struct out_of_bounds_data *data = _data;
 	char index_str[VALUE_LENGTH];
 
-	//if (suppress_report(&data->location))
-	//	return;
-
 	ubsan_prologue(&data->location, "array-index-out-of-bounds");
-
-	val_to_string(index_str, sizeof(index_str), data->index_type, index);
-    
-    /*
-	printf("index %s is out of range for type %s\n", index_str,
-		data->array_type->type_name);
-	ubsan_epilogue();
-    */
 
     printf("used index is out of range for type %s\n",
 		data->array_type->type_name);
@@ -438,7 +294,6 @@ void __ubsan_handle_out_of_bounds(void *_data, void *index)
 
 
 }
-//EXPORT_SYMBOL(__ubsan_handle_out_of_bounds);
 
 void __ubsan_handle_shift_out_of_bounds(void *_data, void *lhs, void *rhs)
 {
@@ -447,34 +302,9 @@ void __ubsan_handle_shift_out_of_bounds(void *_data, void *lhs, void *rhs)
 	struct type_descriptor *lhs_type = data->lhs_type;
 	char rhs_str[VALUE_LENGTH];
 	char lhs_str[VALUE_LENGTH];
-	//unsigned long ua_flags = user_access_save();
-
-	//if (suppress_report(&data->location))
-	//	goto out;
 
 	ubsan_prologue(&data->location, "shift-out-of-bounds");
 
-	val_to_string(rhs_str, sizeof(rhs_str), rhs_type, rhs);
-	val_to_string(lhs_str, sizeof(lhs_str), lhs_type, lhs);
-    /*
-	if (val_is_negative(rhs_type, rhs))
-		printf("shift exponent %s is negative\n", rhs_str);
-
-	else if (get_unsigned_val(rhs_type, rhs) >=
-		type_bit_width(lhs_type))
-		printf("shift exponent %s is too large for %u-bit type %s\n",
-			rhs_str,
-			type_bit_width(lhs_type),
-			lhs_type->type_name);
-	else if (val_is_negative(lhs_type, lhs))
-		printf("left shift of negative value %s\n",
-			lhs_str);
-	else
-		printf("left shift of %s by %s places cannot be"
-			" represented in type %s\n",
-			lhs_str, rhs_str,
-			lhs_type->type_name);
-    */
     if (val_is_negative(rhs_type, rhs))
     printf("shift exponent is negative\n");
 
@@ -490,10 +320,8 @@ void __ubsan_handle_shift_out_of_bounds(void *_data, void *lhs, void *rhs)
 			" represented in type %s\n", lhs_type->type_name);
 
 	ubsan_epilogue();
-out:
-	//user_access_restore(ua_flags); //check user_acces_restore
+
 }
-//EXPORT_SYMBOL(__ubsan_handle_shift_out_of_bounds);
 
 
 void __ubsan_handle_builtin_unreachable(void *_data)
@@ -502,33 +330,20 @@ void __ubsan_handle_builtin_unreachable(void *_data)
 	ubsan_prologue(&data->location, "unreachable");
 	printf("calling __builtin_unreachable()\n");
 	ubsan_epilogue();
-	//panic("can't return from __builtin_unreachable()");
 }
-//EXPORT_SYMBOL(__ubsan_handle_builtin_unreachable);
 
 void __ubsan_handle_load_invalid_value(void *_data, void *val)
 {
 	struct invalid_value_data *data = _data;
 	char val_str[VALUE_LENGTH];
-	//unsigned long ua_flags = user_access_save();
-
-	//if (suppress_report(&data->location))
-	//	goto out;
 
 	ubsan_prologue(&data->location, "invalid-load");
 
-	val_to_string(val_str, sizeof(val_str), data->type, val);
-    /*
-	printf("load of value %s is not a valid value for type %s\n",
-		val_str, data->type->type_name);
-    */
    	printf("load of this value is not a valid value for type %s\n", data->type->type_name);
 
 	ubsan_epilogue();
-out:
-	//user_access_restore(ua_flags);
+
 }
-//EXPORT_SYMBOL(__ubsan_handle_load_invalid_value);
 
 void __ubsan_handle_alignment_assumption(void *_data, unsigned long ptr,
 					 unsigned long align,
@@ -536,9 +351,6 @@ void __ubsan_handle_alignment_assumption(void *_data, unsigned long ptr,
 {
 	struct alignment_assumption_data *data = _data;
 	unsigned long real_ptr;
-
-	//if (suppress_report(&data->location))
-	//	return;
 
 	ubsan_prologue(&data->location, "alignment-assumption");
 
@@ -556,4 +368,3 @@ void __ubsan_handle_alignment_assumption(void *_data, unsigned long ptr,
 
 	ubsan_epilogue();
 }
-//EXPORT_SYMBOL(__ubsan_handle_alignment_assumption);

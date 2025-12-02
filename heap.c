@@ -38,7 +38,3 @@ void *allocate_chunk(unsigned long size) {
 }
 
 void free_chunk(void *ptr) { (void)ptr; }
-
-//void *malloc(unsigned long size) { return kasan_malloc_hook(size); }
-
-//void free(void *ptr) { return kasan_free_hook(ptr); }

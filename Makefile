@@ -25,9 +25,6 @@ CFLAGS := $(CFLAGS_ARCH)
 CFLAGS += -ffreestanding
 
 CFLAGS += -DTARGET_ARCH_$(ARCH)
-#CFLAGS += -DKASAN_SHADOW_MAPPING_OFFSET=$(KASAN_SHADOW_MAPPING_OFFSET)
-#CFLAGS += -DKASAN_SHADOW_MEMORY_START=$(KASAN_SHADOW_MEMORY_START)
-#CFLAGS += -DKASAN_SHADOW_MEMORY_SIZE=$(KASAN_SHADOW_MEMORY_SIZE)
 CFLAGS += -DTARGET_DRAM_START=$(TARGET_DRAM_START)
 CFLAGS += -DTARGET_DRAM_END=$(TARGET_DRAM_END)
 
@@ -43,19 +40,12 @@ CFLAGS += -Ithird_party/printf -I./
 LDFLAGS := -nostdlib
 
 
-# KASan-specific compiler options
-#KASAN_SANITIZE_STACK := 1
-#KASAN_SANITIZE_GLOBALS := 1
 
 KASAN_CC_FLAGS := -fsanitize=undefined
 KASAN_CC_FLAGS += -fno-sanitize=pointer-overflow
 KASAN_CC_FLAGS += -fsanitize=implicit-signed-integer-truncation
-#KASAN_CC_FLAGS += -fno-builtin
-#KASAN_CC_FLAGS += -mllvm -asan-mapping-offset=$(KASAN_SHADOW_MAPPING_OFFSET)
 KASAN_CC_FLAGS += -mllvm -asan-instrumentation-with-call-threshold=0
-#KASAN_CC_FLAGS += -mllvm -asan-stack=$(KASAN_SANITIZE_STACK)
-#KASAN_CC_FLAGS += -mllvm -asan-globals=$(KASAN_SANITIZE_GLOBALS)
-#KASAN_CC_FLAGS += -DKASAN_ENABLED
+
 
 SRCS := kubsan.c \
         heap.c \
@@ -71,7 +61,7 @@ OBJS := $(OBJS:.S=.o)
 LD_SCRIPT := kasan_test.ld
 LD_SCRIPT_GEN := kasan_test.lds
 
-# Use KASAN_CC_FLAGS for the code we would like to cover with KASan
+# Use KASAN_CC_FLAGS for the code we would like to cover with ubsan
 sanitized_lib.o: CFLAGS := $(CFLAGS) $(KASAN_CC_FLAGS)
 kubsan_test.o: CFLAGS := $(CFLAGS) $(KASAN_CC_FLAGS)
 
@@ -79,6 +69,8 @@ kubsan_test.o: CFLAGS := $(CFLAGS) $(KASAN_CC_FLAGS)
 # toolchain of version 18 and higher (i.e. which includes
 # https://github.com/llvm/llvm-project/pull/72933)
 sanitized_lib.o: CFLAGS := $(subst $(ARCH_TARGET),$(KASAN_TARGET),$(CFLAGS))
+kubsan_test.o: CFLAGS := $(subst $(ARCH_TARGET),$(KASAN_TARGET),$(CFLAGS))
+
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@

@@ -15,7 +15,7 @@
 #define __RT_UTILS_H__
 
 void call_global_ctors(void);
-int scnprintf(char * buf, size_t size, const char * fmt, ...); //check varidic arguments!
+int scnprintf(char * buf, size_t size, const char * fmt, ...);
 
 
 #endif  // __RT_UTILS_H__

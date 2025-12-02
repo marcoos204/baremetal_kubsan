@@ -13,15 +13,6 @@
 
 #ifndef __SANITIZED_LIB_H__
 #define __SANITIZED_LIB_H__
-/*
-void test_heap_overflow(void);
-void test_stack_overflow(void);
-void test_globals_overflow(void);
-void test_memset_overflow(void);
-void test_memcpy_overflow(void);
-*/
-
-//ubsan
 
 static void test_ubsan_add_overflow(void);
 static void test_ubsan_sub_overflow(void);
